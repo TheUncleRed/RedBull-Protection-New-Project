@@ -1,0 +1,20 @@
+{
+    "Tickets-Defamation": [
+        {
+            "userid": "1324878864593457225",
+            "time": "<t:1741531377:F>",
+            "claim": null,
+            "transcrept": null,
+            "Ticket": "1348305058613297253",
+            "type": "open"
+        },
+        {
+            "userid": "441691678433083394",
+            "time": "<t:1741881119:F>",
+            "claim": null,
+            "transcrept": null,
+            "Ticket": "1349771988435992638",
+            "type": "open"
+        }
+    ]
+}
