@@ -130,7 +130,7 @@ console.error('Error mentioning member:', error);
 }
 
 }
-
+>
 })
 })*/
 
@@ -157,7 +157,7 @@ client.on("guildMemberUpdate", async (oldMember, newMember) => {
 
 // [ (#) 𝐂𝐥𝐢𝐧𝐞𝐭 𝐋𝐨𝐠𝐠𝐢𝐧𝐠 ]
 client.dblogin(process.env.mongodb)
-client.login('MTMyNDg3ODg2NDU5MzQ1NzIyNQ.GXN8CV.4Mc7uZ6gqeSESZRT9jA_ZnBo1t1U1STuTGKXIQ')
+client.login(process.env.token)
 
 /*
 client.on('messageCreate', async message => {
