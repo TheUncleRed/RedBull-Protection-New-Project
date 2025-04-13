@@ -2,7 +2,6 @@ const { MessageEmbed, MessageActionRow, MessageSelectMenu, MessageButton, Modal,
 const { client, db, emoji, settings } = require('./../../index.js');
 const {generateNumberUniqueTempCase} = require('./../../function/function/generateNumber.js');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { block } = require("sharp");
 const genAI = new GoogleGenerativeAI('AIzaSyClOiWhZymx1Zmyy7sWt2M2BnjvcS5wyTk');
 
 client.on('interactionCreate', async interaction => {
@@ -61,6 +60,8 @@ client.on('interactionCreate', async interaction => {
 if (!interaction.isModalSubmit()) return;
 if (interaction.customId == 'ModalDefamation-Report'){
 
+await interaction.deferReply({ ephemeral: true });
+
 const scammerID = interaction.fields.getTextInputValue('scammerID');
 const DefraudedID = interaction.fields.getTextInputValue('DefraudedID');
 const Item = interaction.fields.getTextInputValue('Item');
@@ -68,6 +69,7 @@ const thePrice = interaction.fields.getTextInputValue('thePrice');
 const theStory = interaction.fields.getTextInputValue('theStory');
 
 const caseID = await generateNumberUniqueTempCase();
+await interaction.editReply({ content: `${emoji.Waiting} **Loading the case**`, ephemeral: true });
 
 const Embed = new MessageEmbed()
 .setTitle(`بلاغ جديد`)
@@ -113,14 +115,15 @@ value: '2'
 ])
 )
 
-await interaction.reply({ embeds: [Embed], components: [row] }).then(
-setTimeout(async () => {
-await interaction.channel.send({ content: `${settings.lineurl}` });
+await interaction.channel.setParent(`1360993690348294286`);
 
-interaction.message.delete()
-
-}, 1)
-)
+await interaction.channel.send({ content: `<@&${settings.Roles.Judge.JudgeRole}>`, embeds: [Embed], components: [row] }).then(async (message) => {
+  await message.pin();
+  setTimeout(async () => {
+    await interaction.channel.send({ content: `${settings.lineurl}` });
+    interaction.message.delete();
+  }, 1);
+});
 
 
 setTimeout(() => {
@@ -136,15 +139,17 @@ interaction.channel.send({ content: `– **الدلائل ** –
 
 await db.push(`TempCases`, {
 id: `${caseID}`,
+channel: `${interaction.channel.id}`,
 repoter : `${scammerID}`,
 scammer : `${DefraudedID}`,
 screenshots : null,
 case : theStory,
 creditstolen : `${thePrice}`,
 by : null,
-block : false,
 in: `<t:${Math.floor(Date.now() / 1000)}:F>`
 });
+
+await interaction.editReply({ content: `${emoji.yesGIF} **Successfully Case Created**`, ephemeral: true });
 
 }
 });
@@ -152,18 +157,23 @@ in: `<t:${Math.floor(Date.now() / 1000)}:F>`
 //
 client.on('interactionCreate', async interaction => {
 if (!interaction.isSelectMenu()) return;
-if (interaction.customId == 'DefamationHelper-Case'){
+if (interaction.customId.startsWith('mdlclcmwcm')) {
 const value = interaction.values[0];
 if (value == '1') {
 
 await interaction.deferReply({ ephemeral: true });
 
-const storyField = interaction.message.embeds[0].fields.find(f => f.name === '**القصة**');
-if (!storyField) return interaction.editReply({ content: '❌ | لم يتم العثور على القصة !' });
+const CaseID = interaction.customId.split('-')[1];
+const dataCases = await db.get(`TempCases`) || [];
+const dataCase = dataCases.find((t) => t.id === CaseID);
+
+if (!dataCase || !dataCase.case) {
+  return interaction.editReply({ content: '❌ | لم يتم العثور على القصة في البيانات!' });
+}
 
 await interaction.editReply({ content: '⏳ | جاري تحليل القصة من خلال الذكاء الاصطناعي ..' });
 
-const originalStory = storyField.value;
+const originalStory = dataCase.case;
 
 const detailedStory = await getDetailedStory(originalStory);
 
@@ -187,17 +197,22 @@ if (interaction.customId.startsWith('mdlclcmwcm')) {
 const value = interaction.values[0];
 if (value == '2') {
 
+// interaction.deferUpdate()
+await interaction.deferReply({ ephemeral: true })
+
 const CaseID = interaction.customId.split('-')[1];
 let dataCases = await db.get("TempCases") || [];
 let dataCase = dataCases.find((t) => t.id === CaseID);
 
-const hasAcss = (message.member.roles.cache.some(role => role.id === '1349704506849366016') )
-if(hasAcss) {
-return interaction.reply({ content: `${emoji.NotAllowed} |  **Your access to do anything is disabled !**` });
+const Acss = (interaction.user.id !== dataCase.by && !(interaction.member.permissions.has('ADMINISTRATOR') || interaction.member.roles.cache.some(role => role.id === settings.Roles.Judge.JudgeOfficer || role.id === settings.Roles.Judge.DeputeJudgeOfficer || role.id === settings.Roles.Admin.AllAccess_Staff ) ));
+const hasAcss = interaction.member.roles.cache.some(role => role.id === '1349704506849366016');
+
+if (Acss) {
+  return interaction.editReply({ content: `${emoji.NotAllowed} |  **You're not authorized to interfere !**`, ephemeral: true });
 }
 
-if (interaction.user.id !== dataCase.by) {
-  return interaction.reply({ content: "🚫 | لا يمكنك التدخل في شؤون البلاغ !", ephemeral: true });
+if (hasAcss) {
+  return interaction.editReply({ content: `${emoji.NotAllowed} |  **Your access to do anything is disabled !**` });
 }
 
 const row = new MessageActionRow().addComponents(
@@ -205,15 +220,15 @@ new MessageSelectMenu()
 .setCustomId(`tcktcc-${CaseID}`)
 .addOptions([
 {
-label: 'رفع البلاغ إلى المسؤولين',
+label: 'رفع البلاغ الى المسؤولين',
 value: 'DefamationHelper-ReportToAdmins'
 }
 ])
 )
 
-await interaction.reply({ 
-content: `> **مرحبًا بك، ${interaction.user}!** 👋\n\n**يمكنك من خلال القائمة أدناه :** 
-- 📢 **رفع البلاغ إلى المسؤولين**\n\nيرجى اختيار الخيار المناسب من القائمة أدناه.`, 
+await interaction.editReply({ 
+content: `> **مرحبًا بك، ${interaction.user}!** 👋\n\n**يمكنك من خلال القائمة ادناه :** 
+- 📢 **رفع البلاغ إلى المسؤولين**\n\nيرجى اختيار الخيار المناسب من القائمة ادناه.`, 
     components: [row], 
     ephemeral: true 
 });
@@ -252,6 +267,9 @@ value:`\`\`\`${dataCase.case}\`\`\``,
 inline:false
 })
 
+const screenshots = dataCase.screenshots || '';
+const attachments = screenshots ? screenshots.split("\n") : [];
+
 const row = new MessageActionRow().addComponents(
 new MessageSelectMenu()
 .setCustomId(`DefamationHelper-SubmitReport-${CaseID}`)
@@ -275,7 +293,21 @@ value: 'DefamationHelper-AddScreeshots'
 ])
 )
 
-await interaction.update({ content: null, embeds: [Embed], components: [row] });
+await interaction.update({ content: `اهلا بك عزيزي المُشهر في واجهة رفع البلاغ ، يُمكنك تعديل البلاغ قبل رفعه .
+  تسطيع ان تضيف الدلائل الى القضية من خلال روم #رفع الدلائل بمُعرف القضية الحالي : **${CaseID}** !.`, embeds: [Embed], components: [row] });
+
+  if (attachments.length > 0) {
+    await interaction.followUp({
+      content: `**الدلائل :**`,
+      files: attachments,
+      ephemeral: true
+    });
+  } else {
+    await interaction.followUp({
+      content: `❌ | لا توجد دلائل مرفقة لهذه القضية.`,
+      ephemeral: true
+    });
+  }
 
  }
 }
@@ -290,13 +322,15 @@ const CaseID = interaction.customId.split('-')[2];
 const dataCases = await db.get(`TempCases`) || [];
 const dataCase = await dataCases?.find((t) => t.id == CaseID)
 
-const hasAcss = (message.member.roles.cache.some(role => role.id === '1349704506849366016') )
-if(hasAcss) {
-return interaction.reply({ content: `${emoji.NotAllowed} |  **Your access to do anything is disabled !**` });
+const Acss = (interaction.user.id !== dataCase.by && !(interaction.member.permissions.has('ADMINISTRATOR') || interaction.member.roles.cache.some(role => role.id === settings.Roles.Judge.JudgeOfficer || role.id === settings.Roles.Judge.DeputeJudgeOfficer || role.id === settings.Roles.Admin.AllAccess_Staff ) ));
+const hasAcss = interaction.member.roles.cache.some(role => role.id === '1349704506849366016');
+
+if (Acss) {
+  return interaction.reply({ content: `${emoji.NotAllowed} |  **You're not authorized to interfere !**`, ephemeral: true });
 }
 
-if (interaction.user.id !== dataCase.by) {
-  return interaction.reply({ content: "🚫 | لا يمكنك التدخل في شؤون البلاغ !", ephemeral: true });
+if (hasAcss) {
+  return interaction.reply({ content: `${emoji.NotAllowed} |  **Your access to do anything is disabled !**` });
 }
 
 const Embed = new MessageEmbed()
@@ -341,7 +375,8 @@ value: 'DefamationHelper-AddScreeshots'
 ])
 )
 
-await interaction.update({ content: null, embeds: [Embed], components: [row] });
+await interaction.update({ content: `اهلا بك عزيزي المُشهر في واجهة رفع البلاغ ، يُمكنك تعديل البلاغ قبل رفعه .
+تسطيع ان تضيف الدلائل الى القضية من خلال روم #رفع الدلائل بمُعرف القضية الحالي : **${CaseID}** !.`, embeds: [Embed], components: [row] });
 
 }
 });

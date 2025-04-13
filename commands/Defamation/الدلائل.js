@@ -12,16 +12,17 @@ const CaseID = args.shift().trim();
 let dataCases = await db.get("TempCases") || [];
 let dataCase = dataCases.find((t) => t.id == CaseID);
 
-const hasAcss = (message.member.roles.cache.some(role => role.id === '1349704506849366016') )
-if(hasAcss) {
-return message.reply({ content: `${emoji.NotAllowed} |  **Your access to do anything is disabled !**` });
+const Acss = (message.author.id !== dataCase?.by && !(message.member.permissions.has('ADMINISTRATOR') || message.member.roles.cache.some(role => role.id === settings.Roles.Judge.JudgeOfficer || role.id === settings.Roles.Judge.DeputeJudgeOfficer || role.id === settings.Roles.Admin.AllAccess_Staff)));
+const hasAcss = message.member.roles.cache.some(role => role.id === '1349704506849366016');
+
+if (Acss) {
+  return message.reply({ content: `${emoji.NotAllowed} |  **You're not authorized to interfere !**`, ephemeral: true });
 }
 
-/*
-if (message.author.id !== dataCase.by) {
-  return message.reply({ content: "🚫 | لا يمكنك التدخل في شؤون البلاغ !" });
-}*/
-  
+if (hasAcss) {
+  return message.reply({ content: `${emoji.NotAllowed} |  **Your access to do anything is disabled !**` });
+}
+
 if (!dataCase) {
   return message.reply({ content: `${emoji.WarningG} |  **There is no case in this ID: \`${CaseID}\` !**` });
 }

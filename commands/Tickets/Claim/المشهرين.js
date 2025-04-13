@@ -1,12 +1,12 @@
 const { Intents, Collection, Client, GuildMember, MessageActionRow, WebhookClient,MessagePayload, GatewayIntentBits, MessageSelectMenu, Modal, MessageEmbed,MessageButton, MessageAttachment, Permissions, TextInputComponent} = require('discord.js');
-const { client, settings, dbPoints, dbTickets } = require('../../../index.js');
+const { client, settings, db, dbPoints, dbTickets } = require('../../../index.js');
 
 client.on("interactionCreate", async (interaction) => {
 if (!interaction.isButton()) return;
 if (interaction.customId === "ClaimTicket-Defamation") {
 
 const hasAcss = (interaction.member.permissions.has('ADMINISTRATOR') || interaction.member.roles.cache.some(role => role.id === `${settings.Roles.Judge.JudgeRole}` || role.id === `${settings.Roles.Admin.AllAccess_Staff}`) )
-const hasAcss2 = (message.member.roles.cache.some(role => role.id === '1349704506849366016') )
+const hasAcss2 = (interaction.member.roles.cache.some(role => role.id === '1349704506849366016') )
 
 if(!hasAcss) {
 interaction.deferUpdate();
@@ -18,8 +18,10 @@ return interaction.reply({ content: `${emoji.NotAllowed} |  **Your access to do 
 }
 
 const DataTicket = await dbTickets.get('Tickets-Defamation');
+let dataCases = await db.get("TempCases");
+
+let E2 = dataCases.find((t) => t.channel === interaction.channel.id);
 const E = DataTicket?.find((t) => t.Ticket === interaction.channel.id);
-if (E?.userid == interaction.user.id) return interaction.reply({ content:`**يـ الله شو انك مجنون !\nلا يمكنك استلام التذكرة انت فاتحها !**`, ephemeral:true });
 
 if (E && E.claim !== null) {
 return interaction.deferReply({ ephemeral: true }).then(() => {
@@ -28,7 +30,9 @@ interaction.editReply({ content: `**تم استلام هذه التذكرة با
 }
 
 E.claim = interaction.user.id;
+E2.by = interaction.user.id;
 await dbTickets.set(`Tickets-Defamation`, DataTicket)
+await db.set(`TempCases`, dataCases)
 
 await interaction.message.components[0].components[1].setCustomId("UnClaimTicket-Defamation").setLabel(`UnClaim`);
 
@@ -88,7 +92,7 @@ await interaction.channel.setName(newName);
 } else if (interaction.customId === "UnClaimTicket-Defamation") {
 
 const hasAcss = (interaction.member.permissions.has('ADMINISTRATOR') || interaction.member.roles.cache.some(role => role.id === `${settings.Roles.Judge.JudgeRole}` || role.id === `${settings.Roles.Admin.AllAccess_Staff}`) )
-const hasAcss2 = (message.member.roles.cache.some(role => role.id === '1349704506849366016') )
+const hasAcss2 = (interaction.member.roles.cache.some(role => role.id === '1349704506849366016') )
 
 if(!hasAcss) {
 interaction.deferUpdate();
@@ -100,7 +104,9 @@ return interaction.reply({ content: `${emoji.NotAllowed} |  **Your access to do 
 }
 
 const DataTicket = await dbTickets.get('Tickets-Defamation');
+let dataCases = await db.get("TempCases");
 const E = DataTicket?.find((t) => t.Ticket === interaction.channel.id);
+let E2 = dataCases.find((t) => t.channel === interaction.channel.id);
 
 if (!E || E.claim !== interaction.user.id) {
 return interaction.reply({ content: `${emoji.AccessDenied} |  **Only the claimer of the ticket can unclaim !**` });
@@ -117,6 +123,11 @@ interaction.reply({ embeds: [UnCalaimEmbed] });
 if (E && E.claim === interaction.user.id) {
 E.claim = null;
 await dbTickets.set(`Tickets-Defamation`, DataTicket);
+}
+
+if (E2 && E2.by === interaction.user.id) {
+E2.by = null;
+await db.set(`TempCases`, dataCases);
 }
 
 await interaction.message.edit({ components: [interaction.message.components[0]] });

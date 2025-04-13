@@ -1,5 +1,5 @@
 const { MessageActionRow, MessageButton, Modal, TextInputComponent } = require("discord.js");
-const { client, emoji } = require('../../../index.js');
+const { client, db, emoji } = require('../../../index.js');
 
 client.on('interactionCreate', async interaction => {
 if (!interaction.isSelectMenu()) return
@@ -55,7 +55,7 @@ const row = new MessageActionRow().addComponents(
 dataCase.case = NewStory;
   await db.set("TempCases", dataCases);
 
-await interaction.update({ embeds: [], components: [row] });
+  await interaction.update({ content: null, embeds: [], components: [row] });
   
   }
 });

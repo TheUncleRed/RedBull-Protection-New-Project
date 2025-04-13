@@ -54,7 +54,7 @@ const row = new MessageActionRow().addComponents(
 dataCase.scammer = NewScammerID;
   await db.set("TempCases", dataCases);
 
-await interaction.update({ embeds: [], components: [row] });
+  await interaction.update({ content: null, embeds: [], components: [row] });
   
   }
 });

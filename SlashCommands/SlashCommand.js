@@ -2,7 +2,7 @@ const { client, db } = require('../index');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v9');
 
-const clientID = '1324878864593457225';
+const clientID = '1360242609209082048';
 
 const commands = [
     {
