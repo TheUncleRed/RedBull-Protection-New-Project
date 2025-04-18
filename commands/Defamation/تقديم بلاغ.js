@@ -1,8 +1,7 @@
 const { MessageEmbed, MessageActionRow, MessageSelectMenu, MessageButton, Modal, TextInputComponent } = require("discord.js");
 const { client, db, emoji, settings } = require('./../../index.js');
-const {generateNumberUniqueTempCase} = require('./../../function/function/generateNumber.js');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const genAI = new GoogleGenerativeAI('AIzaSyClOiWhZymx1Zmyy7sWt2M2BnjvcS5wyTk');
+const { generateNumberUniqueTempCase } = require('./../../function/function/generateNumber.js');
+const { getDetailedStory } = require('./../../function/function/StoryAnalysis-byAi.js');
 
 client.on('interactionCreate', async interaction => {
 if (!interaction.isButton()) return;
@@ -143,6 +142,7 @@ channel: `${interaction.channel.id}`,
 repoter : `${scammerID}`,
 scammer : `${DefraudedID}`,
 screenshots : null,
+oldScreenshots : null,
 case : theStory,
 creditstolen : `${thePrice}`,
 by : null,
@@ -168,7 +168,7 @@ const dataCases = await db.get(`TempCases`) || [];
 const dataCase = dataCases.find((t) => t.id === CaseID);
 
 if (!dataCase || !dataCase.case) {
-  return interaction.editReply({ content: '❌ | لم يتم العثور على القصة في البيانات!' });
+ return interaction.editReply({ content: `${emoji.Error} |  **There is no case in this ID: \`${CaseID}\` !**` });
 }
 
 await interaction.editReply({ content: '⏳ | جاري تحليل القصة من خلال الذكاء الاصطناعي ..' });
@@ -197,7 +197,6 @@ if (interaction.customId.startsWith('mdlclcmwcm')) {
 const value = interaction.values[0];
 if (value == '2') {
 
-// interaction.deferUpdate()
 await interaction.deferReply({ ephemeral: true })
 
 const CaseID = interaction.customId.split('-')[1];
@@ -212,8 +211,10 @@ if (Acss) {
 }
 
 if (hasAcss) {
-  return interaction.editReply({ content: `${emoji.NotAllowed} |  **Your access to do anything is disabled !**` });
+  return interaction.editReply({ content: `${emoji.NotAllowed} |  **Your access to do anything is disabled !**`, ephemeral: true });
 }
+
+if(!dataCase) return interaction.reply({ content: `${emoji.Error} |  **There is no case in this ID: \`${CaseID}\` !**`, ephemeral: true });
 
 const row = new MessageActionRow().addComponents(
 new MessageSelectMenu()
@@ -247,6 +248,8 @@ if (value == 'DefamationHelper-ReportToAdmins') {
 const CaseID = interaction.customId.split('-')[1];
 const dataCases = await db.get(`TempCases`) || [];
 const dataCase = await dataCases?.find((t) => t.id == CaseID)
+
+if(!dataCase) return interaction.reply({ content: `${emoji.Error} |  **There is no case in this ID: \`${CaseID}\` !**`, ephemeral: true });
 
 const Embed = new MessageEmbed()
 .addFields({
@@ -304,7 +307,7 @@ await interaction.update({ content: `اهلا بك عزيزي المُشهر ف�
     });
   } else {
     await interaction.followUp({
-      content: `❌ | لا توجد دلائل مرفقة لهذه القضية.`,
+      content: `${emoji.WarningG} |  **No evidence has been uploaded yet !.**`,
       ephemeral: true
     });
   }
@@ -322,16 +325,20 @@ const CaseID = interaction.customId.split('-')[2];
 const dataCases = await db.get(`TempCases`) || [];
 const dataCase = await dataCases?.find((t) => t.id == CaseID)
 
+await interaction.deferUpdate();
+
 const Acss = (interaction.user.id !== dataCase.by && !(interaction.member.permissions.has('ADMINISTRATOR') || interaction.member.roles.cache.some(role => role.id === settings.Roles.Judge.JudgeOfficer || role.id === settings.Roles.Judge.DeputeJudgeOfficer || role.id === settings.Roles.Admin.AllAccess_Staff ) ));
 const hasAcss = interaction.member.roles.cache.some(role => role.id === '1349704506849366016');
 
 if (Acss) {
-  return interaction.reply({ content: `${emoji.NotAllowed} |  **You're not authorized to interfere !**`, ephemeral: true });
+  return interaction.editReply({ content: `${emoji.NotAllowed} |  **You're not authorized to interfere !**`, ephemeral: true });
 }
 
 if (hasAcss) {
-  return interaction.reply({ content: `${emoji.NotAllowed} |  **Your access to do anything is disabled !**` });
+  return interaction.editReply({ content: `${emoji.NotAllowed} |  **Your access to do anything is disabled !**`, ephemeral: true });
 }
+
+if(!dataCase) return interaction.editReply({ content: `${emoji.Error} |  **There is no case in this ID: \`${CaseID}\` !**`, ephemeral: true });
 
 const Embed = new MessageEmbed()
 .addFields({
@@ -368,54 +375,12 @@ value: 'DefamationHelper-EditStory'
 },{
 label: 'تعديل مبلغ النصب',
 value: 'DefamationHelper-EditPrice'
-},{
-label: 'اضافة الدلائل',
-value: 'DefamationHelper-AddScreeshots'
 }
 ])
 )
 
-await interaction.update({ content: `اهلا بك عزيزي المُشهر في واجهة رفع البلاغ ، يُمكنك تعديل البلاغ قبل رفعه .
+await interaction.editReply({ content: `اهلا بك عزيزي المُشهر في واجهة رفع البلاغ ، يُمكنك تعديل البلاغ قبل رفعه .
 تسطيع ان تضيف الدلائل الى القضية من خلال روم #رفع الدلائل بمُعرف القضية الحالي : **${CaseID}** !.`, embeds: [Embed], components: [row] });
 
 }
 });
-
-// استدعاء Google Gemini API
-async function getDetailedStory(story) {
-    try {
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-const prompt = `
-🔍 **تحليل عملية احتيال في ديسكورد** 🔍
-انت المساعد الذكي لـ RedBull Protection الذي يوجد فيه ثلاث اقسام وهم : التشهير والوسطاء والمزاد
-وانت تعمل في قسم التشهير 
-الذي نقوم فيه بتشهير النصابين الذين ينصبوا في الديسكورد سواء في المجتمع العربي او لا 
-يوجد في الديسكورد عده عملات مثل الكرديت التابع ل بروبوت مثل البيتس التابع ل لوتكس مثل لونا او لونا بيتس التابع ل لونا الخ .. 
-لقد طلب مشهر مساعدتك في تحليل وفهم القصه 
-لا يوجد في القصه اسماء من داخل مركبات القصه نفسها 
-في حال وجدت اسم تاكد ان الاسم ليس من مركبات القصه
-
-📌 **طريقة التحليل:**
-- **ملخص بسيط للأحداث.**
-- **كيف وقع الاحتيال؟** (ما الأساليب المستخدمة؟).
-- ** في النهاية :** قدم مرخصًا تشرح فيه القصة بطريقة واضحة وبلهجه عاميه ومفهومه عند كل الهجات.
-
-**القصة المقدمة للتحليل:** ${story}
-
-لا تقم بكتابة اي شئ اخر سواء كترحيب الخ ..
-لا تقم بكتابة نصائح او تعليمات او اي شئ اخر..
-لا تقم بكتابة عناوين طريقه التحليل بل قسمهم الى اقسام ..
-قم بالتكلم باللغه العربيه بالهجه االسعوديه والكويتيه ..
-🚀 قم بالتحليل الآن وقدم تقريرًا يغطي كل النقاط المذكورة بشكل واضح وسهل الفهم.`;
-
-const result = await model.generateContent({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
-const response = result.response.candidates[0].content.parts[0].text;
-        
-return response;
-
-} catch (error) {
-        console.error("❌ خطأ في تحليل القصة باستخدام Gemini:", error);
-        return "حدث خطأ أثناء تحليل القصة.";
-    }
-}

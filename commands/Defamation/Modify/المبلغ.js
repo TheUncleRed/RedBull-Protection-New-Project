@@ -1,5 +1,6 @@
 const { MessageActionRow, MessageButton, Modal, TextInputComponent } = require("discord.js");
-const { client, emoji } = require('../../../index.js');
+const { client, db, emoji } = require('../../../index.js');
+// const { sendLogToWebhook } = require('../../../function/function/modifyDetailsLog.js');
 
 client.on('interactionCreate', async interaction => {
 if (!interaction.isSelectMenu()) return;
@@ -11,7 +12,7 @@ const CaseID = interaction.customId.split('-')[2];
 const dataCases = await db.get(`TempCases`) || [];
 const dataCase = await dataCases?.find((t) => t.id == CaseID)
 
-if(!dataCase) return interaction.reply({ content: `${emoji.WarningG} |  **There is no case in this ID: \`${CaseID}\` !**` });
+if(!dataCase) return interaction.reply({ content: `${emoji.Error} |  **There is no case in this ID: \`${CaseID}\` !**` });
 
 const modal = new Modal()
 .setCustomId(`ModalDefamationHelper-EditPrice-${CaseID}`)
@@ -44,13 +45,22 @@ const CaseID = interaction.customId.split('-')[2];
 const dataCases = await db.get(`TempCases`) || [];
 const dataCase = await dataCases?.find((t) => t.id == CaseID)
 
-if(!dataCase) return interaction.reply({ content: `${emoji.WarningG} |  **There is no case in this ID: \`${CaseID}\` !**` });
+if(!dataCase) return interaction.reply({ content: `${emoji.Error} |  **There is no case in this ID: \`${CaseID}\` !**` });
 
 const row = new MessageActionRow().addComponents(
   new MessageButton()
 .setCustomId(`DefamationHelper-ShowCase-${CaseID}`)
 .setStyle('SUCCESS')
 .setEmoji(`✅`))
+
+/*await sendLogToWebhook({
+  title: "Edited",
+  caseID: CaseID,
+  fieldName: "Case",
+  oldValue: dataCase.,
+  newValue: '',
+  editor: interaction.user.id
+});*/
 
 dataCase.creditstolen = newPrice;
   await db.set("TempCases", dataCases);

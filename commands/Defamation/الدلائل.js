@@ -24,7 +24,7 @@ if (hasAcss) {
 }
 
 if (!dataCase) {
-  return message.reply({ content: `${emoji.WarningG} |  **There is no case in this ID: \`${CaseID}\` !**` });
+  return message.reply({ content: `${emoji.Error} |  **There is no case in this ID: \`${CaseID}\` !**` });
 }
 
 if (args.length === 0 && message.attachments.size === 0) {
@@ -36,17 +36,15 @@ if (args.length === 0 && message.attachments.size === 0) {
     {
     label: 'اظهار الدلائل',
     value: '1'
-    },{
-      label: 'رفع دلائل',
-      value: '2'  
-    },{
+    },
+    {
       label: 'حذف دليل',
-      value: '3'  
+      value: '2'  
     }
     ])
     )
 
-    return message.reply({ content: "🔍 اختر أحد الخيارات:", components: [row] });
+return await message.reply({ content: ``, components: [row] });
 }
 
 let images = dataCase.screenshots || "";
